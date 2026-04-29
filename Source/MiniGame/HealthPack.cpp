@@ -1,34 +1,48 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "HealthPack.h"
+#include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "PlayerCharacter.h" // We need this to cast to the player!
 
-// Sets default values for this component's properties
-UHealthPack::UHealthPack()
+AHealthPack::AHealthPack()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
-	// ...
+	// 1. Setup the Collision Sphere (The Root)
+	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
+	RootComponent = CollisionSphere;
+	CollisionSphere->InitSphereRadius(50.0f);
+	CollisionSphere->SetCollisionProfileName(TEXT("Trigger")); // Allows the player to walk through it
+
+	// 2. Setup the visible Mesh
+	PackMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PackMesh"));
+	PackMesh->SetupAttachment(RootComponent);
+	PackMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // So the player doesn't bump into the physical mesh
+
+	// Default heal amount
+	HealAmount = 25.0f;
 }
 
-
-// Called when the game starts
-void UHealthPack::BeginPlay()
+void AHealthPack::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
-	
+	// Bind our custom Overlap function to Unreal's actual collision event
+	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AHealthPack::OnOverlapBegin);
 }
 
-
-// Called every frame
-void UHealthPack::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void AHealthPack::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (OtherActor && OtherActor != this)
+	{
+		// Try to cast whatever touched us to the PlayerCharacter
+		APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
 
-	// ...
+		if (Player)
+		{
+			Player->Heal(HealAmount);
+
+			// Destroy the health pack so it can't be picked up twice
+			Destroy();
+		}
+	}
 }
-

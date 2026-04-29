@@ -1,26 +1,33 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "HealthPackSpawner.generated.h"
 
+// Forward declaration
+class AHealthPack;
+
 UCLASS()
 class MINIGAME_API AHealthPackSpawner : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
+public:
 	AHealthPackSpawner();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	// Variables go in the header!
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	float SpawnInterval;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	TSubclassOf<AHealthPack> HealthPackClass;
+
+	// The function declaration
+	void SpawnHealthPack();
+
+	// A timer to handle the 5-second repeating countdown
+	FTimerHandle SpawnTimerHandle;
 };

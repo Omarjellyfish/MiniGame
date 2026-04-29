@@ -2,6 +2,7 @@
 #include "EnemyCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/TargetPoint.h" // We will use Target Points in the level as spawn locations
+#include "EndScreenWidget.h"
 
 AMiniGameMode::AMiniGameMode()
 {
@@ -82,6 +83,23 @@ void AMiniGameMode::EndGame(bool bIsWin)
 	if (bIsWin)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("YOU WIN!"));
+		if (EndScreenClass)
+		{
+			UEndScreenWidget* EndWidget = CreateWidget<UEndScreenWidget>(GetWorld(), EndScreenClass);
+			if (EndWidget)
+			{
+				EndWidget->AddToViewport();
+				EndWidget->SetupScreen(bIsWin);
+
+				// Freeze game and unlock mouse
+				if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+				{
+					PC->bShowMouseCursor = true;
+					PC->SetInputMode(FInputModeUIOnly());
+					UGameplayStatics::SetGamePaused(GetWorld(), true);
+				}
+			}
+		}
 		// Later: Show Win UI Screen
 	}
 	else

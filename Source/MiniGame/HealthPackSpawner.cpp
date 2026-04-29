@@ -1,27 +1,34 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "HealthPackSpawner.h"
+#include "HealthPack.h"
+#include "TimerManager.h" // We need this to use Unreal's timer system!
 
-// Sets default values
 AHealthPackSpawner::AHealthPackSpawner()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	// Turn off Tick! Timers are much better for performance than checking every single frame
+	PrimaryActorTick.bCanEverTick = false;
 
+	// Set default values here
+	SpawnInterval = 5.0f;
 }
 
-// Called when the game starts or when spawned
 void AHealthPackSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// Start a timer that calls SpawnHealthPack() every 'SpawnInterval' seconds, and set it to loop (true)
+	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHealthPackSpawner::SpawnHealthPack, SpawnInterval, true);
 }
 
-// Called every frame
-void AHealthPackSpawner::Tick(float DeltaTime)
+// Notice the AHealthPackSpawner:: prefix! This connects it to the class.
+void AHealthPackSpawner::SpawnHealthPack()
 {
-	Super::Tick(DeltaTime);
+	if (HealthPackClass)
+	{
+		FVector SpawnLocation = GetActorLocation();
+		FRotator SpawnRotation = FRotator::ZeroRotator;
 
+		GetWorld()->SpawnActor<AHealthPack>(HealthPackClass, SpawnLocation, SpawnRotation);
+
+		UE_LOG(LogTemp, Warning, TEXT("Health Pack Spawned!"));
+	}
 }
-

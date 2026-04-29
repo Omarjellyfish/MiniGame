@@ -4,8 +4,13 @@
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "PlayerHud.h"
+#include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "PauseMenuWidget.h"
 #include "DrawDebugHelpers.h"
+
+
 APlayerCharacter::APlayerCharacter()
 {
 	// 1. Setup the Camera
@@ -27,6 +32,17 @@ APlayerCharacter::APlayerCharacter()
 	AttackDamage = 35.0f; // 3 hits to kill a 100 HP enemy
 	AttackRange = 200.0f; // Slightly longer than enemy range so you can space them
 	AttackRadius = 45.0f; // A 45-unit thick sphere is perfect for melee
+
+	// 4. Hud Setup
+	PrimaryActorTick.bCanEverTick = true; // Make sure this is TRUE so we can update the cooldown bar!
+
+	AttackDamage = 35.0f;
+	AttackRange = 200.0f;
+	AttackRadius = 45.0f;
+
+	// New Cooldown variables
+	AttackCooldown = 1.5f; // Wait 1.5 seconds between knife swings
+	bCanAttack = true;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -39,6 +55,15 @@ void APlayerCharacter::BeginPlay()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+	if (PlayerHudClass)
+	{
+		PlayerHudInstance = CreateWidget<UPlayerHud>(GetWorld(), PlayerHudClass);
+		if (PlayerHudInstance)
+		{
+			PlayerHudInstance->AddToViewport();
+			PlayerHudInstance->UpdateHealth(CurrentHealth, MaxHealth); // Set initial health
 		}
 	}
 }
@@ -62,6 +87,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Attacking
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &APlayerCharacter::Attack);
+
+		// Pausing
+		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &APlayerCharacter::PauseGame);
 	}
 }
 
@@ -92,9 +120,25 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
 }
+void APlayerCharacter::Heal(float HealAmount)
+{
+	if (CurrentHealth > 0.0f)
+	{
+		CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.0f, MaxHealth);
 
+		// --- ADD THIS TO UPDATE THE HUD WHEN HEALED ---
+		if (PlayerHudInstance)
+		{
+			PlayerHudInstance->UpdateHealth(CurrentHealth, MaxHealth);
+		}
+	}
+}
 void APlayerCharacter::Attack()
 {
+	if (!bCanAttack) return;
+	// 2. Put the weapon on cooldown
+	bCanAttack = false;
+	GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &APlayerCharacter::ResetAttack, AttackCooldown, false);
 	// 1. Play the Animation
 	if (AttackMontage)
 	{
@@ -136,6 +180,63 @@ void APlayerCharacter::Attack()
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Sphere hit! Dealing %f damage to %s"), AttackDamage, *HitCharacter->GetName());
 				UGameplayStatics::ApplyDamage(HitCharacter, AttackDamage, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+	}
+}
+
+void APlayerCharacter::ResetAttack()
+{
+	bCanAttack = true;
+}
+
+void APlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Smoothly update the cooldown bar if the HUD exists
+	if (PlayerHudInstance)
+	{
+		if (!bCanAttack)
+		{
+			// Get exactly how much time has passed since we swung the knife
+			float TimeElapsed = GetWorldTimerManager().GetTimerElapsed(AttackTimerHandle);
+			PlayerHudInstance->UpdateCooldown(TimeElapsed, AttackCooldown);
+		}
+		else
+		{
+			// If we can attack, the bar is completely full
+			PlayerHudInstance->UpdateCooldown(1.0f, 1.0f);
+		}
+	}
+}
+float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// 1. Let the BaseCharacter do the math and apply the damage
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// 2. Update the Player HUD!
+	if (PlayerHudInstance)
+	{
+		PlayerHudInstance->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+
+	return ActualDamage;
+}
+
+void APlayerCharacter::PauseGame()
+{
+	if (PauseMenuClass && !UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		UPauseMenuWidget* PauseWidget = CreateWidget<UPauseMenuWidget>(GetWorld(), PauseMenuClass);
+		if (PauseWidget)
+		{
+			PauseWidget->AddToViewport();
+			if (APlayerController* PC = Cast<APlayerController>(Controller))
+			{
+				PC->bShowMouseCursor = true;
+				PC->SetInputMode(FInputModeGameAndUI());
+				UGameplayStatics::SetGamePaused(GetWorld(), true);
 			}
 		}
 	}

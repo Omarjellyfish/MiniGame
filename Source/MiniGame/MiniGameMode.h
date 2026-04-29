@@ -36,6 +36,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Wave System")
 	TSubclassOf<class AEnemyCharacter> EnemyClassToSpawn;
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UEndScreenWidget> EndScreenClass;
+
+
 	// --- Functions ---
 	void StartWave();
 	void SpawnEnemyWave(int32 NumberOfEnemies);

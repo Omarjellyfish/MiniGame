@@ -1,28 +1,37 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h" // Changed from ActorComponent.h
 #include "HealthPack.generated.h"
 
+class USphereComponent;
+class UStaticMeshComponent;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class MINIGAME_API UHealthPack : public UActorComponent
+// Notice the 'A' prefix instead of 'U', and it inherits from AActor
+UCLASS()
+class MINIGAME_API AHealthPack : public AActor
 {
 	GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UHealthPack();
+public:
+	AHealthPack();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	// The physical look of the health pack
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* PackMesh;
 
-		
+	// The invisible sphere that detects the player stepping on it
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USphereComponent* CollisionSphere;
+
+	// How much health it restores
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float HealAmount;
+
+	// The function that fires when the player touches it
+	UFUNCTION()
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 };
