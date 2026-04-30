@@ -48,6 +48,17 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (PC)
+	{
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameOnly());
+	}/*
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameOnly());
+	}*/
 
 	// Add the Input Mapping Context to the player
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -226,16 +237,41 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 
 void APlayerCharacter::PauseGame()
 {
-	if (PauseMenuClass && !UGameplayStatics::IsGamePaused(GetWorld()))
+	// 1. IF THE GAME IS ALREADY PAUSED (Unpause it)
+	if (UGameplayStatics::IsGamePaused(GetWorld()))
 	{
-		UPauseMenuWidget* PauseWidget = CreateWidget<UPauseMenuWidget>(GetWorld(), PauseMenuClass);
-		if (PauseWidget)
+		// Remove the widget from the screen
+		if (ActivePauseMenu)
 		{
-			PauseWidget->AddToViewport();
-			if (APlayerController* PC = Cast<APlayerController>(Controller))
+			ActivePauseMenu->RemoveFromParent();
+			ActivePauseMenu = nullptr; // Clear the memory
+		}
+
+		// Hide mouse, switch back to game input, and unpause
+		if (APlayerController* PC = Cast<APlayerController>(Controller))
+		{
+			PC->bShowMouseCursor = false;
+			PC->SetInputMode(FInputModeGameOnly());
+		}
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+	}
+
+	// 2. IF THE GAME IS RUNNING (Pause it)
+	else
+	{
+		if (PauseMenuClass)
+		{
+			ActivePauseMenu = CreateWidget<UPauseMenuWidget>(GetWorld(), PauseMenuClass);
+			if (ActivePauseMenu)
 			{
-				PC->bShowMouseCursor = true;
-				PC->SetInputMode(FInputModeGameAndUI());
+				ActivePauseMenu->AddToViewport();
+
+				// Show mouse, allow UI clicking, and pause the game
+				if (APlayerController* PC = Cast<APlayerController>(Controller))
+				{
+					PC->bShowMouseCursor = true;
+					PC->SetInputMode(FInputModeGameAndUI());
+				}
 				UGameplayStatics::SetGamePaused(GetWorld(), true);
 			}
 		}

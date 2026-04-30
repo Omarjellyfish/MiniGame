@@ -9,6 +9,7 @@ AMiniGameMode::AMiniGameMode()
 	CurrentWave = 0;
 	TotalWaves = 2; // Requirement: Design at least 2 waves
 	EnemiesRemaining = 0;
+	EnemyCountMultiplierPerWave = 2;
 }
 
 void AMiniGameMode::BeginPlay()
@@ -32,7 +33,7 @@ void AMiniGameMode::StartWave()
 	UE_LOG(LogTemp, Warning, TEXT("Starting Wave %d"), CurrentWave);
 
 	// Formula for enemies per wave: Wave 1 = 3 enemies, Wave 2 = 6 enemies, etc.
-	int32 EnemiesToSpawn = CurrentWave * 3;
+	int32 EnemiesToSpawn = CurrentWave * EnemyCountMultiplierPerWave;
 	SpawnEnemyWave(EnemiesToSpawn);
 }
 
@@ -77,34 +78,48 @@ void AMiniGameMode::OnEnemyDied()
 		GetWorld()->GetTimerManager().SetTimer(NextWaveTimer, this, &AMiniGameMode::StartWave, 3.0f, false);
 	}
 }
+void AMiniGameMode::OnPlayerDied()
+{
+	UE_LOG(LogTemp, Error, TEXT("The Player has died! Ending the game..."));
 
+	// Trigger the End Screen with bIsWin = false
+	EndGame(false);
+}
 void AMiniGameMode::EndGame(bool bIsWin)
 {
+	// 1. Print to the log so we can debug
 	if (bIsWin)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("YOU WIN!"));
-		if (EndScreenClass)
-		{
-			UEndScreenWidget* EndWidget = CreateWidget<UEndScreenWidget>(GetWorld(), EndScreenClass);
-			if (EndWidget)
-			{
-				EndWidget->AddToViewport();
-				EndWidget->SetupScreen(bIsWin);
-
-				// Freeze game and unlock mouse
-				if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-				{
-					PC->bShowMouseCursor = true;
-					PC->SetInputMode(FInputModeUIOnly());
-					UGameplayStatics::SetGamePaused(GetWorld(), true);
-				}
-			}
-		}
-		// Later: Show Win UI Screen
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("YOU LOSE!"));
-		// Later: Show Lose UI Screen
+	}
+
+	// 2. The safety trap: Did we forget to assign the widget in the editor?
+	if (!EndScreenClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CRITICAL ERROR: EndScreenClass is NULL! Please assign WBP_EndScreen in BP_MiniGameMode."));
+		return;
+	}
+
+	// 3. Create and show the UI for BOTH winning and losing
+	UEndScreenWidget* EndWidget = CreateWidget<UEndScreenWidget>(GetWorld(), EndScreenClass);
+	if (EndWidget)
+	{
+		EndWidget->AddToViewport();
+
+		// This one line handles the Red/Green text swap!
+		EndWidget->SetupScreen(bIsWin);
+
+		// Freeze game and unlock mouse
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			PC->bShowMouseCursor = true;
+			PC->SetInputMode(FInputModeUIOnly());
+			UGameplayStatics::SetGamePaused(GetWorld(), true);
+		}
 	}
 }
+

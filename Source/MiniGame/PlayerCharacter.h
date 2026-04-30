@@ -65,6 +65,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<class UPauseMenuWidget> PauseMenuClass;
 
+	UPROPERTY()
+	UPauseMenuWidget* ActivePauseMenu;
+
 	void PauseGame();
 
 	// Input Handler Functions
@@ -87,6 +90,7 @@ protected:
 
 	bool bCanAttack;
 	FTimerHandle AttackTimerHandle;
+
 
 	void ResetAttack();
 public:

@@ -24,6 +24,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
 	float CurrentHealth;
 
+	// Add this!
+	bool bIsDead;
 	// --- ANIMATIONS ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
 	UAnimMontage* AttackMontage;

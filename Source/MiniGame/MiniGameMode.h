@@ -18,11 +18,15 @@ public:
 
 	// Called by enemies when they die
 	void OnEnemyDied();
+	void OnPlayerDied(); // <--- ADD THIS LINE
 
 protected:
 	virtual void BeginPlay() override;
 
 	// --- Wave System Variables ---
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave System")
+	int32 EnemyCountMultiplierPerWave;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave System")
 	int32 CurrentWave;
 
@@ -31,6 +35,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave System")
 	int32 EnemiesRemaining;
+
+
 
 	// The class of the enemy we want to spawn (We will set this to BP_EnemyCharacter in the editor)
 	UPROPERTY(EditAnywhere, Category = "Wave System")
