@@ -9,42 +9,45 @@
 #include "Kismet/GameplayStatics.h"
 #include "PauseMenuWidget.h"
 #include "DrawDebugHelpers.h"
+#include "MiniGameMode.h"
+#include "PlayerHud.h" // (Make sure your HUD include is here too)
 
 
 APlayerCharacter::APlayerCharacter()
 {
 	// 1. Setup the Camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
-	FirstPersonCamera->SetRelativeLocation(FVector(-39.56f, 1.75f, 64.f)); // Position the camera near the head
-	FirstPersonCamera->bUsePawnControlRotation = true; // Let the mouse rotate the camera
+
+	// ATTACH TO MESH SOCKET: This is the "correct" way for immersion.
+	// Replace "CameraSocket" with the actual name of the socket on your skeleton (e.g., "head")
+	FirstPersonCamera->SetupAttachment(GetMesh(), FName("CameraSocket"));
+
+	// Reset relative transforms so it sits exactly ON the socket
+	FirstPersonCamera->SetRelativeLocation(FVector::ZeroVector);
+	FirstPersonCamera->SetRelativeRotation(FRotator::ZeroRotator);
+
+	FirstPersonCamera->bUsePawnControlRotation = true;
 
 	// 2. Setup the First Person Mesh (Arms)
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
-	FirstPersonMesh->SetOnlyOwnerSee(true); // Only the player sees these arms
-	FirstPersonMesh->SetupAttachment(FirstPersonCamera); // Attach arms to the camera
+	FirstPersonMesh->SetOnlyOwnerSee(true);
+	FirstPersonMesh->SetupAttachment(FirstPersonCamera); // Arms follow the camera
 	FirstPersonMesh->bCastDynamicShadow = false;
 	FirstPersonMesh->CastShadow = false;
+
+	// These offsets depend on your specific arm mesh assets
 	FirstPersonMesh->SetRelativeRotation(FRotator(1.9f, -19.19f, 5.2f));
 	FirstPersonMesh->SetRelativeLocation(FVector(-0.5f, -4.4f, -155.7f));
 
-	// 3. Attack Setup
-	AttackDamage = 35.0f; // 3 hits to kill a 100 HP enemy
-	AttackRange = 200.0f; // Slightly longer than enemy range so you can space them
-	AttackRadius = 45.0f; // A 45-unit thick sphere is perfect for melee
-
-	// 4. Hud Setup
-	PrimaryActorTick.bCanEverTick = true; // Make sure this is TRUE so we can update the cooldown bar!
-
+	// 3. Stats & Logic
 	AttackDamage = 35.0f;
 	AttackRange = 200.0f;
 	AttackRadius = 45.0f;
-
-	// New Cooldown variables
-	AttackCooldown = 1.5f; // Wait 1.5 seconds between knife swings
+	AttackCooldown = 1.5f;
 	bCanAttack = true;
-}
 
+	PrimaryActorTick.bCanEverTick = true;
+}
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -75,6 +78,10 @@ void APlayerCharacter::BeginPlay()
 		{
 			PlayerHudInstance->AddToViewport();
 			PlayerHudInstance->UpdateHealth(CurrentHealth, MaxHealth); // Set initial health
+			if (AMiniGameMode* GameMode = Cast<AMiniGameMode>(GetWorld()->GetAuthGameMode()))
+			{
+				PlayerHudInstance->UpdateWaveText(GameMode->CurrentWave);
+			}
 		}
 	}
 }
@@ -174,11 +181,11 @@ void APlayerCharacter::Attack()
 
 	// --- DEBUG VISUALS ---
 	// Draw the starting sphere (Blue)
-	DrawDebugSphere(GetWorld(), StartLocation, AttackRadius, 12, FColor::Blue, false, 2.0f);
-	// Draw the ending sphere (Green if hit, Red if miss)
-	DrawDebugSphere(GetWorld(), EndLocation, AttackRadius, 12, bHit ? FColor::Green : FColor::Red, false, 2.0f);
-	// Draw a line connecting them
-	DrawDebugLine(GetWorld(), StartLocation, EndLocation, bHit ? FColor::Green : FColor::Red, false, 2.0f, 0, 2.0f);
+	//DrawDebugSphere(GetWorld(), StartLocation, AttackRadius, 12, FColor::Blue, false, 2.0f);
+	//// Draw the ending sphere (Green if hit, Red if miss)
+	//DrawDebugSphere(GetWorld(), EndLocation, AttackRadius, 12, bHit ? FColor::Green : FColor::Red, false, 2.0f);
+	//// Draw a line connecting them
+	//DrawDebugLine(GetWorld(), StartLocation, EndLocation, bHit ? FColor::Green : FColor::Red, false, 2.0f, 0, 2.0f);
 
 	// 5. Apply Damage
 	if (bHit)
@@ -223,10 +230,8 @@ void APlayerCharacter::Tick(float DeltaTime)
 }
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	// 1. Let the BaseCharacter do the math and apply the damage
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	// 2. Update the Player HUD!
 	if (PlayerHudInstance)
 	{
 		PlayerHudInstance->UpdateHealth(CurrentHealth, MaxHealth);
@@ -237,17 +242,15 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 
 void APlayerCharacter::PauseGame()
 {
-	// 1. IF THE GAME IS ALREADY PAUSED (Unpause it)
+	
 	if (UGameplayStatics::IsGamePaused(GetWorld()))
 	{
-		// Remove the widget from the screen
 		if (ActivePauseMenu)
 		{
 			ActivePauseMenu->RemoveFromParent();
-			ActivePauseMenu = nullptr; // Clear the memory
+			ActivePauseMenu = nullptr; 
 		}
 
-		// Hide mouse, switch back to game input, and unpause
 		if (APlayerController* PC = Cast<APlayerController>(Controller))
 		{
 			PC->bShowMouseCursor = false;
@@ -256,7 +259,6 @@ void APlayerCharacter::PauseGame()
 		UGameplayStatics::SetGamePaused(GetWorld(), false);
 	}
 
-	// 2. IF THE GAME IS RUNNING (Pause it)
 	else
 	{
 		if (PauseMenuClass)
@@ -266,7 +268,6 @@ void APlayerCharacter::PauseGame()
 			{
 				ActivePauseMenu->AddToViewport();
 
-				// Show mouse, allow UI clicking, and pause the game
 				if (APlayerController* PC = Cast<APlayerController>(Controller))
 				{
 					PC->bShowMouseCursor = true;

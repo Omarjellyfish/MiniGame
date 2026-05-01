@@ -5,6 +5,8 @@
 #include "MiniGameMode.h"             // Required to call OnEnemyDied when an enemy dies
 #include "Components/CapsuleComponent.h" // Required for capsule component
 #include "GameFramework/CharacterMovementComponent.h" // Required for character movement
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 // Sets default values
 ABaseCharacter::ABaseCharacter()
 {
@@ -60,15 +62,12 @@ void ABaseCharacter::Die()
 		PlayAnimMontage(DeathMontage);
 	}
 
-	// --- THE FIX IS HERE ---
-	// 1. Turn off the capsule collision so the player can walk through the dead body
+
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 2. Turn off the movement system so gravity doesn't pull them through the floor!
 	GetCharacterMovement()->DisableMovement();
 	// -----------------------
 
-	// ONLY unpossess if it is an AI enemy. 
 	if (Controller && !IsPlayerControlled())
 	{
 		Controller->UnPossess();
@@ -87,5 +86,31 @@ void ABaseCharacter::Die()
 		}
 	}
 
-	SetLifeSpan(3.0f);
+	SetLifeSpan(1.0f);
+}
+
+void ABaseCharacter::PerformAttackHitbox()
+{
+	
+	FVector StartLocation = GetActorLocation() + (GetActorForwardVector() * 50.0f);
+	FVector EndLocation = StartLocation + (GetActorForwardVector() * 50.0f); // Reach of the weapon
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this); // Don't hit ourselves
+	FHitResult HitResult;
+
+	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(), StartLocation, EndLocation, 40.0f,
+		UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore,
+		EDrawDebugTrace::ForDuration, 
+		HitResult, true);
+
+	
+	if (bHit && HitResult.GetActor())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName());
+
+		// Apply 25 damage to whatever we hit
+		UGameplayStatics::ApplyDamage(HitResult.GetActor(), 25.0f, GetController(), this, UDamageType::StaticClass());
+	}
 }

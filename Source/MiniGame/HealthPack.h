@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h" // Changed from ActorComponent.h
+#include "GameFramework/Actor.h" 
 #include "HealthPack.generated.h"
 
 class USphereComponent;
 class UStaticMeshComponent;
 
-// Notice the 'A' prefix instead of 'U', and it inherits from AActor
+
 UCLASS()
 class MINIGAME_API AHealthPack : public AActor
 {

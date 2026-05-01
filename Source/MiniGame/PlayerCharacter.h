@@ -5,7 +5,7 @@
 #include "InputActionValue.h" // Required for Enhanced Input
 #include "PlayerCharacter.generated.h"
 
-// Forward declarations to keep compilation fast
+// Forward declarations
 class UCameraComponent;
 class USkeletalMeshComponent;
 class UInputMappingContext;
@@ -80,10 +80,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UPlayerHud> PlayerHudClass;
 
+
+public:
 	// The actual HUD instance created on the screen
 	UPROPERTY()
 	UPlayerHud* PlayerHudInstance;
 
+protected:
 	// --- COOLDOWN SYSTEM ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float AttackCooldown;

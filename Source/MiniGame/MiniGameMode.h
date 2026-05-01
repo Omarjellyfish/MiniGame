@@ -16,9 +16,8 @@ class MINIGAME_API AMiniGameMode : public AGameModeBase
 public:
 	AMiniGameMode();
 
-	// Called by enemies when they die
 	void OnEnemyDied();
-	void OnPlayerDied(); // <--- ADD THIS LINE
+	void OnPlayerDied();
 
 protected:
 	virtual void BeginPlay() override;
@@ -27,6 +26,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave System")
 	int32 EnemyCountMultiplierPerWave;
 
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave System")
 	int32 CurrentWave;
 

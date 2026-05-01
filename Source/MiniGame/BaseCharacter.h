@@ -33,11 +33,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
 	UAnimMontage* DeathMontage;
 
+
+
+
 	// --- FUNCTIONS ---
 	// A custom function we will call when health reaches zero
 	virtual void Die();
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void PerformAttackHitbox();
 	// Overriding Unreal's built-in damage system
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 };

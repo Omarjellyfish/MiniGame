@@ -4,8 +4,8 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerHud.generated.h"
 
-class UProgressBar; // Forward declaration
-
+class UProgressBar; 
+class UTextBlock; 
 UCLASS()
 class MINIGAME_API UPlayerHud : public UUserWidget
 {
@@ -20,7 +20,11 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* CooldownBar;
 
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* Txt_WaveNumber; 
+
 	// Functions to update the UI
 	void UpdateHealth(float CurrentHealth, float MaxHealth);
 	void UpdateCooldown(float CurrentCooldown, float MaxCooldown);
+	void UpdateWaveText(int32 NewWave);
 };
